@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag Knife Post-Processor</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0a0b;
+            --bg-panel: #131316;
+            --bg-input: #1a1a1f;
+            --border: #2a2a32;
+            --border-focus: #4a9eff;
+            --text: #e4e4e7;
+            --text-dim: #71717a;
+            --text-bright: #fafafa;
+            --accent: #4a9eff;
+            --accent-dim: #2563eb;
+            --warning: #f59e0b;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --mono: 'JetBrains Mono', monospace;
+            --sans: 'IBM Plex Sans', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo svg {
+            width: 28px;
+            height: 28px;
+            stroke: white;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        h1 {
+            font-family: var(--mono);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-bright);
+            letter-spacing: -0.02em;
+        }
+
+        h1 span {
+            color: var(--accent);
+        }
+
+        .subtitle {
+            font-size: 0.875rem;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-header h2 {
+            font-family: var(--mono);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-dim);
+        }
+
+        .panel-header .indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        .config-group {
+            margin-bottom: 20px;
+        }
+
+        .config-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .config-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .config-group input,
+        .config-group select {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 0.875rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .config-group input:focus,
+        .config-group select:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.15);
+        }
+
+        .config-group select option {
+            background: var(--bg-panel);
+            color: var(--text);
+        }
+
+        .config-group .unit {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .code-area {
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+        }
+
+        .code-area textarea {
+            flex: 1;
+            width: 100%;
+            padding: 16px;
+            background: var(--bg-dark);
+            border: none;
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 0.8125rem;
+            line-height: 1.6;
+            resize: none;
+        }
+
+        .code-area textarea:focus {
+            outline: none;
+        }
+
+        .code-area textarea::placeholder {
+            color: var(--text-dim);
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-input);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-family: var(--sans);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dim);
+        }
+
+        .btn-secondary {
+            background: var(--bg-input);
+            border-color: var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--text-dim);
+        }
+
+        .btn-icon {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-icon svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 32px;
+            text-align: center;
+            margin-bottom: 16px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(74, 158, 255, 0.05);
+        }
+
+        .drop-zone svg {
+            width: 40px;
+            height: 40px;
+            stroke: var(--text-dim);
+            margin-bottom: 12px;
+        }
+
+        .drop-zone p {
+            font-size: 0.875rem;
+            color: var(--text-dim);
+        }
+
+        .drop-zone .highlight {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .stat {
+            background: var(--bg-input);
+            padding: 12px;
+            border-radius: 6px;
+        }
+
+        .stat-label {
+            font-size: 0.6875rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .stat-value {
+            font-family: var(--mono);
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-bright);
+            margin-top: 4px;
+        }
+
+        .log-area {
+            height: 120px;
+            overflow-y: auto;
+            padding: 12px 16px;
+            background: var(--bg-dark);
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            line-height: 1.8;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 12px;
+        }
+
+        .log-entry .time {
+            color: var(--text-dim);
+        }
+
+        .log-entry.info .msg { color: var(--text); }
+        .log-entry.success .msg { color: var(--success); }
+        .log-entry.warning .msg { color: var(--warning); }
+        .log-entry.error .msg { color: var(--danger); }
+
+        .visualization {
+            height: 500px;
+            position: relative;
+            background: var(--bg-dark);
+        }
+
+        .visualization canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .viz-controls {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .viz-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .viz-btn:hover {
+            background: var(--bg-input);
+            border-color: var(--text-dim);
+        }
+
+        .viz-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .legend {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 0.75rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        .legend-color.rapid { background: var(--warning); opacity: 0.6; }
+        .legend-color.cut { background: var(--accent); }
+        .legend-color.lift { background: var(--danger); }
+
+        @media (max-width: 1200px) {
+            .visualization, .code-area {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5"/>
+                    <path d="M2 12l10 5 10-5"/>
+                </svg>
+            </div>
+            <div>
+                <h1>Drag<span>Knife</span> Post-Processor</h1>
+                <p class="subtitle">G-code transformation for CNC drag knife cutting</p>
+            </div>
+        </header>
+
+        <div class="main-grid">
+            <!-- Configuration Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="indicator"></div>
+                    <h2>Configuration</h2>
+                </div>
+                <div class="panel-body">
+                    <div class="config-group">
+                        <label>Knife Offset</label>
+                        <input type="number" id="knifeOffset" value="2.0" step="0.1" min="0">
+                        <p class="unit">mm — pivot to blade tip distance</p>
+                    </div>
+
+                    <div class="config-group">
+                        <label>Z Heights</label>
+                        <div class="input-row">
+                            <div>
+                                <input type="number" id="zUp" value="5.0" step="0.5">
+                                <p class="unit">Z up (safe)</p>
+                            </div>
+                            <div>
+                                <input type="number" id="zDown" value="-1.0" step="0.1">
+                                <p class="unit">Z down (cut)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="config-group">
+                        <label>Pivot Retract Height</label>
+                        <input type="number" id="pivotRetract" value="1.0" step="0.1" min="0">
+                        <p class="unit">mm above cut depth during swivel (0 = no lift)</p>
+                    </div>
+
+                    <div class="config-group">
+                        <label>Sharp Angle Threshold</label>
+                        <input type="number" id="sharpAngle" value="30" step="5" min="0" max="90">
+                        <p class="unit">degrees — angles below this trigger lift+rotate</p>
+                    </div>
+
+                    <div class="config-group">
+                        <label>Minimum Travel Distance</label>
+                        <input type="number" id="minTravel" value="3.0" step="0.5" min="0">
+                        <p class="unit">mm — min distance for knife to self-align</p>
+                    </div>
+
+                    <div class="config-group">
+                        <label>Feed Rates</label>
+                        <div class="input-row">
+                            <div>
+                                <input type="number" id="feedRate" value="1000" step="100" min="0">
+                                <p class="unit">cutting (mm/min)</p>
+                            </div>
+                            <div>
+                                <input type="number" id="plungeRate" value="500" step="50" min="0">
+                                <p class="unit">plunge (mm/min)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-label">Input Lines</div>
+                            <div class="stat-value" id="inputLines">0</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Output Lines</div>
+                            <div class="stat-value" id="outputLines">0</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Sharp Corners</div>
+                            <div class="stat-value" id="sharpCorners">0</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Lifts Added</div>
+                            <div class="stat-value" id="liftsAdded">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Input G-Code</h2>
+                </div>
+                <div class="code-area">
+                    <div class="drop-zone" id="dropZone">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17,8 12,3 7,8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        <p>Drop G-code file here or <span class="highlight">browse</span></p>
+                    </div>
+                    <input type="file" id="fileInput" class="file-input" accept=".nc,.gcode,.ngc,.tap,.txt">
+                    <textarea id="inputCode" placeholder="; Paste your G-code here or drop a file above...
+G21 ; mm mode
+G90 ; absolute positioning
+G0 Z5
+G0 X0 Y0
+G1 Z-1 F500
+G1 X50 Y0 F1000
+G1 X50 Y50
+G1 X0 Y50
+G1 X0 Y0
+G0 Z5
+M30"></textarea>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary btn-icon" id="processBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5,3 19,12 5,21"/>
+                        </svg>
+                        Process
+                    </button>
+                    <button class="btn btn-secondary" id="clearInputBtn">Clear</button>
+                </div>
+            </div>
+
+            <!-- Output Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Output G-Code</h2>
+                </div>
+                <div class="code-area">
+                    <textarea id="outputCode" readonly placeholder="; Processed G-code will appear here..."></textarea>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary btn-icon" id="downloadBtn" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Download
+                    </button>
+                    <button class="btn btn-secondary" id="copyBtn" disabled>Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log Panel -->
+        <div class="panel" style="margin-top: 24px;">
+            <div class="panel-header">
+                <h2>Processing Log</h2>
+            </div>
+            <div class="log-area" id="logArea"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const getConfig = () => ({
+            knifeOffset: parseFloat(document.getElementById('knifeOffset').value) || 2.0,
+            zUp: parseFloat(document.getElementById('zUp').value) || 5.0,
+            zDown: parseFloat(document.getElementById('zDown').value) || -1.0,
+            pivotRetract: parseFloat(document.getElementById('pivotRetract').value) || 1.0,
+            sharpAngle: parseFloat(document.getElementById('sharpAngle').value) || 30,
+            minTravel: parseFloat(document.getElementById('minTravel').value) || 3.0,
+            feedRate: parseFloat(document.getElementById('feedRate').value) || 1000,
+            plungeRate: parseFloat(document.getElementById('plungeRate').value) || 500
+        });
+
+        // Logging
+        const log = (msg, type = 'info') => {
+            const logArea = document.getElementById('logArea');
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span class="time">${time}</span><span class="msg">${msg}</span>`;
+            logArea.appendChild(entry);
+            logArea.scrollTop = logArea.scrollHeight;
+        };
+
+        const clearLog = () => {
+            document.getElementById('logArea').innerHTML = '';
+        };
+
+        // Math utilities
+        const distance = (p1, p2) => Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+
+        const calculateAngle = (p1, p2, p3) => {
+            // Vector from p1 to p2
+            const v1x = p2.x - p1.x;
+            const v1y = p2.y - p1.y;
+            // Vector from p2 to p3
+            const v2x = p3.x - p2.x;
+            const v2y = p3.y - p2.y;
+            
+            const mag1 = Math.sqrt(v1x * v1x + v1y * v1y);
+            const mag2 = Math.sqrt(v2x * v2x + v2y * v2y);
+            
+            if (mag1 < 0.0001 || mag2 < 0.0001) return 180;
+            
+            const dot = v1x * v2x + v1y * v2y;
+            const cosAngle = Math.max(-1, Math.min(1, dot / (mag1 * mag2)));
+            return Math.acos(cosAngle) * (180 / Math.PI);
+        };
+
+        const getDirection = (p1, p2) => {
+            return Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        };
+
+        // G-code parsing
+        const parseGcodeLine = (line) => {
+            const cleanLine = line.split(';')[0].trim();
+            if (!cleanLine) return { command: null, params: {} };
+            
+            const commandMatch = cleanLine.match(/([GM]\d+)/i);
+            const command = commandMatch ? commandMatch[1].toUpperCase() : null;
+            
+            const params = {};
+            const paramMatches = cleanLine.matchAll(/([XYZFSE])(-?\d*\.?\d+)/gi);
+            for (const match of paramMatches) {
+                params[match[1].toUpperCase()] = parseFloat(match[2]);
+            }
+            
+            return { command, params };
+        };
+
+        // Main post-processor
+        const processGcode = (inputCode) => {
+            const config = getConfig();
+            const lines = inputCode.split('\n');
+            const output = [];
+            let stats = { sharpCorners: 0, liftsAdded: 0 };
+            
+            // State tracking
+            let positionBuffer = []; // Last 3 positions
+            let currentPos = { x: 0, y: 0, z: config.zUp };
+            let currentFeed = config.feedRate;
+            let isKnifeDown = false;
+            let pendingShortMoves = []; // Buffer for moves too short for knife alignment
+            let accumulatedDistance = 0;
+            
+            const emit = (gcode, comment = '') => {
+                output.push(comment ? `${gcode} ; ${comment}` : gcode);
+            };
+            
+            const liftKnife = (reason = '') => {
+                if (isKnifeDown) {
+                    emit(`G0 Z${config.zUp.toFixed(3)}`, reason || 'lift knife');
+                    currentPos.z = config.zUp;
+                    isKnifeDown = false;
+                    stats.liftsAdded++;
+                }
+            };
+            
+            const plungeKnife = () => {
+                if (!isKnifeDown) {
+                    emit(`G1 Z${config.zDown.toFixed(3)} F${config.plungeRate}`, 'plunge knife');
+                    currentPos.z = config.zDown;
+                    isKnifeDown = true;
+                }
+            };
+            
+            const circleKnife = (cornerPos, fromAngle, toAngle) => {
+                // Based on reference implementation:
+                // 1. travel = point BEFORE corner on incoming path (overcut endpoint)
+                // 2. swivel = point AFTER corner on outgoing path (where we resume cutting)
+                // 3. Arc from travel to swivel, centered on corner
+                // 4. Small retract during arc, then plunge
+                //
+                //    incoming     corner      outgoing
+                //    ------>----[travel]      [swivel]------>
+                //                    \   arc   /
+                //                     \       /
+                //                      \     /
+                //                       \   /
+                //                      corner (arc center)
+                
+                const offset = config.knifeOffset;
+                
+                // Calculate turn direction for G2/G3
+                let angleDiff = toAngle - fromAngle;
+                while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                
+                // travel point: from corner, go in incoming direction by offset
+                // (this is where pivot goes to make blade tip reach corner)
+                const travelX = cornerPos.x + Math.cos(fromAngle) * offset;
+                const travelY = cornerPos.y + Math.sin(fromAngle) * offset;
+                
+                // swivel point: from corner, go in outgoing direction by offset
+                // (this is where pivot needs to be to start cutting in new direction)
+                const swivelX = cornerPos.x + Math.cos(toAngle) * offset;
+                const swivelY = cornerPos.y + Math.sin(toAngle) * offset;
+                
+                // Step 1: Move to travel point (overcut)
+                emit(`G1 X${travelX.toFixed(3)} Y${travelY.toFixed(3)} F${config.feedRate}`, 'overcut');
+                
+                // Step 2: Small retract (not full lift - configurable)
+                const retractZ = config.zDown + config.pivotRetract;
+                if (config.pivotRetract > 0) {
+                    emit(`G0 Z${retractZ.toFixed(3)}`, 'retract for pivot');
+                }
+                
+                // Step 3: Arc from travel to swivel, center at corner
+                // I, J = offset from current position (travel) to center (corner)
+                const iOffset = cornerPos.x - travelX;
+                const jOffset = cornerPos.y - travelY;
+                
+                // G2 = CW, G3 = CCW
+                // Right turn (angleDiff < 0) = CW
+                // Left turn (angleDiff > 0) = CCW
+                const arcCmd = angleDiff < 0 ? 'G2' : 'G3';
+                
+                emit(`${arcCmd} X${swivelX.toFixed(3)} Y${swivelY.toFixed(3)} I${iOffset.toFixed(3)} J${jOffset.toFixed(3)} F${config.feedRate}`, 'swivel');
+                
+                // Step 4: Plunge back to cutting depth (only if we lifted)
+                if (config.pivotRetract > 0) {
+                    emit(`G1 Z${config.zDown.toFixed(3)} F${config.plungeRate}`, 'plunge');
+                }
+                
+                // Update position - we're now at swivel point
+                currentPos.x = swivelX;
+                currentPos.y = swivelY;
+                currentPos.z = config.zDown;
+                isKnifeDown = true;
+            };
+            
+            const flushPendingMoves = () => {
+                // Execute all pending short moves
+                for (const move of pendingShortMoves) {
+                    emit(`G1 X${move.x.toFixed(3)} Y${move.y.toFixed(3)} F${move.f.toFixed(0)}`);
+                }
+                pendingShortMoves = [];
+                accumulatedDistance = 0;
+            };
+            
+            const resetBuffer = () => {
+                positionBuffer = [];
+                pendingShortMoves = [];
+                accumulatedDistance = 0;
+            };
+            
+            // Add header
+            emit('; Drag Knife Post-Processed G-code');
+            emit(`; Knife offset: ${config.knifeOffset}mm, Sharp angle: ${config.sharpAngle}°`);
+            emit(`; Min travel: ${config.minTravel}mm`);
+            emit('');
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const { command, params } = parseGcodeLine(line);
+                
+                // Pass through comments and empty lines
+                if (!command && !Object.keys(params).length) {
+                    if (line.trim().startsWith(';') || line.trim().startsWith('(') || !line.trim()) {
+                        output.push(line);
+                    }
+                    continue;
+                }
+                
+                // Update feed rate if specified
+                if (params.F !== undefined) {
+                    currentFeed = params.F;
+                }
+                
+                // Handle different commands
+                if (command === 'G0') {
+                    // Rapid move - lift knife, move, then handle re-entry
+                    const newX = params.X !== undefined ? params.X : currentPos.x;
+                    const newY = params.Y !== undefined ? params.Y : currentPos.y;
+                    const newZ = params.Z !== undefined ? params.Z : currentPos.z;
+                    
+                    // Flush any pending moves first
+                    flushPendingMoves();
+                    
+                    // If moving in XY, lift first
+                    if (newX !== currentPos.x || newY !== currentPos.y) {
+                        liftKnife('rapid move');
+                    }
+                    
+                    // Emit the rapid move
+                    let moveCmd = 'G0';
+                    if (params.X !== undefined) moveCmd += ` X${newX.toFixed(3)}`;
+                    if (params.Y !== undefined) moveCmd += ` Y${newY.toFixed(3)}`;
+                    if (params.Z !== undefined) moveCmd += ` Z${newZ.toFixed(3)}`;
+                    emit(moveCmd);
+                    
+                    currentPos = { x: newX, y: newY, z: newZ };
+                    resetBuffer();
+                    
+                } else if (command === 'G1') {
+                    // Linear cutting move
+                    const newX = params.X !== undefined ? params.X : currentPos.x;
+                    const newY = params.Y !== undefined ? params.Y : currentPos.y;
+                    const newZ = params.Z !== undefined ? params.Z : currentPos.z;
+                    const feed = params.F !== undefined ? params.F : currentFeed;
+                    
+                    // Handle Z-only moves
+                    if (params.X === undefined && params.Y === undefined && params.Z !== undefined) {
+                        emit(`G1 Z${newZ.toFixed(3)} F${config.plungeRate}`);
+                        currentPos.z = newZ;
+                        isKnifeDown = newZ <= config.zDown;
+                        continue;
+                    }
+                    
+                    const newPoint = { x: newX, y: newY };
+                    const moveDistance = distance(currentPos, newPoint);
+                    
+                    // Add current position to buffer if empty
+                    if (positionBuffer.length === 0) {
+                        positionBuffer.push({ x: currentPos.x, y: currentPos.y });
+                    }
+                    
+                    // We now have the new target, check if we have enough history
+                    if (positionBuffer.length >= 2) {
+                        // We have p1, p2 in buffer, newPoint is p3
+                        const p1 = positionBuffer[positionBuffer.length - 2];
+                        const p2 = positionBuffer[positionBuffer.length - 1];
+                        const p3 = newPoint;
+                        
+                        const angle = calculateAngle(p1, p2, p3);
+                        
+                        if (angle < config.sharpAngle) {
+                            // Sharp corner detected
+                            stats.sharpCorners++;
+                            log(`Sharp corner at (${p2.x.toFixed(1)}, ${p2.y.toFixed(1)}): ${angle.toFixed(1)}°`, 'warning');
+                            
+                            // Check if we have enough travel distance
+                            if (accumulatedDistance + moveDistance >= config.minTravel) {
+                                // Flush pending moves up to the corner point
+                                flushPendingMoves();
+                                
+                                // Handle sharp corner with overcut + circle
+                                const fromDirection = getDirection(p1, p2);
+                                const toDirection = getDirection(p2, p3);
+                                circleKnife(p2, fromDirection, toDirection);
+                                stats.liftsAdded++;
+                            } else {
+                                // Accumulate this move, will process when we have enough distance
+                                pendingShortMoves.push({ x: newX, y: newY, f: feed });
+                                accumulatedDistance += moveDistance;
+                                positionBuffer.push(newPoint);
+                                currentPos = { x: newX, y: newY, z: currentPos.z };
+                                continue;
+                            }
+                        } else {
+                            // Not a sharp corner, flush any pending moves
+                            flushPendingMoves();
+                        }
+                    }
+                    
+                    // Ensure knife is down for cutting
+                    plungeKnife();
+                    
+                    // Emit the move
+                    let moveCmd = 'G1';
+                    moveCmd += ` X${newX.toFixed(3)} Y${newY.toFixed(3)}`;
+                    moveCmd += ` F${feed.toFixed(0)}`;
+                    emit(moveCmd);
+                    
+                    // Update state
+                    currentPos = { x: newX, y: newY, z: currentPos.z };
+                    positionBuffer.push(newPoint);
+                    
+                    // Keep buffer at max 3 points
+                    if (positionBuffer.length > 3) {
+                        positionBuffer.shift();
+                    }
+                    
+                    accumulatedDistance = 0;
+                    
+                } else if (command === 'G2' || command === 'G3') {
+                    // Arc moves - pass through but reset buffer
+                    // (Full arc support would require more complex handling)
+                    flushPendingMoves();
+                    output.push(line);
+                    
+                    if (params.X !== undefined) currentPos.x = params.X;
+                    if (params.Y !== undefined) currentPos.y = params.Y;
+                    if (params.Z !== undefined) currentPos.z = params.Z;
+                    
+                    resetBuffer();
+                    log(`Arc command ${command} passed through - manual review recommended`, 'warning');
+                    
+                } else {
+                    // Pass through other commands (M codes, G20/G21, G90/G91, etc.)
+                    output.push(line);
+                    
+                    // Track modal commands that affect position mode
+                    if (command === 'G90' || command === 'G91') {
+                        log(`Position mode: ${command === 'G90' ? 'absolute' : 'relative'}`, 'info');
+                    }
+                }
+            }
+            
+            // Flush any remaining pending moves
+            flushPendingMoves();
+            
+            // Ensure knife is lifted at end
+            liftKnife('end of program');
+            
+            return { output: output.join('\n'), stats };
+        };
+
+        // UI Handlers
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const inputCode = document.getElementById('inputCode');
+        const outputCode = document.getElementById('outputCode');
+        const processBtn = document.getElementById('processBtn');
+        const clearInputBtn = document.getElementById('clearInputBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const copyBtn = document.getElementById('copyBtn');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) loadFile(file);
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) loadFile(file);
+        });
+        
+        const loadFile = (file) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                inputCode.value = e.target.result;
+                log(`Loaded file: ${file.name} (${file.size} bytes)`, 'success');
+                updateStats();
+            };
+            reader.readAsText(file);
+        };
+        
+        const updateStats = () => {
+            document.getElementById('inputLines').textContent = inputCode.value.split('\n').filter(l => l.trim()).length;
+            document.getElementById('outputLines').textContent = outputCode.value.split('\n').filter(l => l.trim()).length;
+        };
+        
+        inputCode.addEventListener('input', updateStats);
+        
+        processBtn.addEventListener('click', () => {
+            clearLog();
+            log('Starting post-processing...', 'info');
+            
+            try {
+                const config = getConfig();
+                log(`Config: offset=${config.knifeOffset}mm, angle=${config.sharpAngle}°, minTravel=${config.minTravel}mm`, 'info');
+                
+                const { output, stats } = processGcode(inputCode.value);
+                outputCode.value = output;
+                
+                document.getElementById('sharpCorners').textContent = stats.sharpCorners;
+                document.getElementById('liftsAdded').textContent = stats.liftsAdded;
+                
+                updateStats();
+                downloadBtn.disabled = false;
+                copyBtn.disabled = false;
+                
+                log(`Processing complete: ${stats.sharpCorners} sharp corners, ${stats.liftsAdded} lifts added`, 'success');
+            } catch (err) {
+                log(`Error: ${err.message}`, 'error');
+                console.error(err);
+            }
+        });
+        
+        clearInputBtn.addEventListener('click', () => {
+            inputCode.value = '';
+            updateStats();
+        });
+        
+        downloadBtn.addEventListener('click', () => {
+            const blob = new Blob([outputCode.value], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'drag_knife_output.nc';
+            a.click();
+            URL.revokeObjectURL(url);
+            log('Downloaded: drag_knife_output.nc', 'success');
+        });
+        
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(outputCode.value);
+            log('Copied to clipboard', 'success');
+        });
+        
+        // Initialize
+        updateStats();
+        log('Drag Knife Post-Processor ready', 'info');
+    </script>
+</body>
+</html>
